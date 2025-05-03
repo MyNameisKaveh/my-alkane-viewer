@@ -2,3 +2,4 @@ streamlit
 rdkit-pypi
 py3Dmol
 stmol
+ipython_genutils
