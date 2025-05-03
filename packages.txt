@@ -1,0 +1,6 @@
+# System dependencies needed for RDKit drawing
+libxrender1
+libfreetype6-dev
+libxft-dev
+libcairo2-dev
+libpango1.0-dev
