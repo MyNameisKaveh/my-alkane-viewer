@@ -125,7 +125,7 @@ def display_3d_molecule(smiles_string, index):
 
         # 7. نمایش در Streamlit با استفاده از stmol
         # کلید (key) منحصر به فرد برای هر نمایشگر لازم است
-        showmol(view, height=400, width=400, key=f"mol3d_{index}_{smiles_string}")
+        showmol(view, height=400, width=400)
 
     except Exception as e:
         st.error(f"خطای غیرمنتظره در پردازش {smiles_string}: {e}")
