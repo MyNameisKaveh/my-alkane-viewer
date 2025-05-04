@@ -6,9 +6,8 @@ from stmol import showmol
 import time
 import math
 
-# --- دیکشنری نام‌ها (بدون تغییر) ---
+# --- دیکشنری نام‌ها (کاملش کنید!) ---
 smiles_to_name_map = {
-    # ... (همان دیکشنری قبلی را اینجا کپی کنید) ...
     # C1-C7
     'C': 'Methane', 'CC': 'Ethane', 'CCC': 'Propane', 'CCCC': 'Butane', 'CC(C)C': 'Isobutane (2-Methylpropane)',
     'CCCCC': 'Pentane', 'CC(C)CC': 'Isopentane (2-Methylbutane)', 'CC(C)(C)C': 'Neopentane (2,2-Dimethylpropane)',
@@ -28,9 +27,8 @@ smiles_to_name_map = {
 }
 
 
-# --- تابع گرفتن SMILES (بدون تغییر) ---
+# --- تابع گرفتن SMILES (بدون تغییر نسبت به نسخه قبل) ---
 def get_alkane_isomer_smiles(n):
-    # ... (همان تابع قبلی را اینجا کپی کنید) ...
     isomers_map = {
         1: [s for s in ['C'] if s in smiles_to_name_map], 2: [s for s in ['CC'] if s in smiles_to_name_map],
         3: [s for s in ['CCC'] if s in smiles_to_name_map], 4: [s for s in ['CCCC', 'CC(C)C'] if s in smiles_to_name_map],
@@ -43,88 +41,63 @@ def get_alkane_isomer_smiles(n):
     }
     return isomers_map.get(n, [])
 
-
-# --- تابع ساخت *داده‌های* نمایش مولکول (نه خود نمایش) ---
+# --- تابع آماده‌سازی داده (بدون تغییر نسبت به نسخه قبل) ---
 def prepare_molecule_view_data(smiles_string, index):
-    """Generates 3D coords and returns data needed for py3Dmol view."""
     try:
-        mol = Chem.MolFromSmiles(smiles_string)
-        if mol is None: return None # خطا را بعدا لاگ می‌کنیم
+        mol = Chem.MolFromSmiles(smiles_string);
+        if mol is None: return None
         mol = Chem.AddHs(mol)
         embed_result = AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
         if embed_result == -1:
              try: AllChem.UFFOptimizeMolecule(mol); embed_result = AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
              except: pass
-        # بهینه سازی اختیاری حتی اگر embed موفق بود
         if embed_result != -1:
              try: AllChem.UFFOptimizeMolecule(mol)
-             except: pass # اگر بهینه‌سازی نشد مهم نیست
-
-        # اگر embed ناموفق بود، None برگردان
+             except: pass
         if embed_result == -1:
             st.warning(f"هشدار: تولید سه‌بعدی برای {smiles_string} ناموفق بود.")
-            # اینجا می‌توانیم داده‌های نمایش دوبعدی را برگردانیم
-            try:
-                img = Draw.MolToImage(mol, size=(300,300))
-                return {'type': '2d', 'image': img, 'smiles': smiles_string}
-            except:
-                return None # نمایش دوبعدی هم ممکن نبود
-            # return None
-
-        # اگر موفق بود، داده‌های سه‌بعدی را برگردان
+            try: img = Draw.MolToImage(mol, size=(300,300)); return {'type': '2d', 'image': img, 'smiles': smiles_string}
+            except: return None
         mol_block = Chem.MolToMolBlock(mol)
         return {'type': '3d', 'mol_block': mol_block, 'smiles': smiles_string}
+    except Exception as e: st.error(f"خطا در آماده‌سازی {smiles_string}: {e}"); return None
 
-    except Exception as e:
-        st.error(f"خطای غیرمنتظره در آماده‌سازی {smiles_string}: {e}")
-        return None
-
-# --- تابع نمایش داده‌های مولکول ---
+# --- تابع نمایش داده (بدون تغییر نسبت به نسخه قبل) ---
 def display_molecule_data(view_data):
-    """Displays the molecule based on prepared data."""
-    if view_data is None:
-        st.error("داده‌ای برای نمایش مولکول وجود ندارد.")
-        return
-
+    if view_data is None: st.error("داده‌ای برای نمایش مولکول وجود ندارد."); return
     if view_data['type'] == '3d':
         try:
             view = py3Dmol.view(width=400, height=300)
             view.addModel(view_data['mol_block'], 'mol')
             view.setStyle({'stick': {'radius': 0.15}, 'sphere': {'scale': 0.25}})
-            view.setBackgroundColor('#F5F5F5')
-            view.zoomTo()
+            view.setBackgroundColor('#F5F5F5'); view.zoomTo()
             showmol(view, height=400, width=400)
         except Exception as e:
             st.error(f"خطا در نمایش سه‌بعدی {view_data.get('smiles', '')}: {e}")
-            # نمایش دوبعدی به عنوان جایگزین نهایی
-            try:
-                mol_2d = Chem.MolFromSmiles(view_data['smiles'])
+            try: # Fallback to 2D
+                mol_2d = Chem.MolFromSmiles(view_data['smiles']);
                 if mol_2d: img = Draw.MolToImage(mol_2d, size=(300,300)); st.image(img, caption=f"نمایش دوبعدی جایگزین: {view_data['smiles']}")
             except: pass
-
     elif view_data['type'] == '2d':
-        try:
-            st.image(view_data['image'], caption=f"نمایش دوبعدی: {view_data['smiles']}")
-        except Exception as e:
-             st.error(f"خطا در نمایش دوبعدی {view_data.get('smiles', '')}: {e}")
-    else:
-        st.error("نوع داده مولکول نامشخص است.")
-
+        try: st.image(view_data['image'], caption=f"نمایش دوبعدی: {view_data['smiles']}")
+        except Exception as e: st.error(f"خطا در نمایش دوبعدی {view_data.get('smiles', '')}: {e}")
+    else: st.error("نوع داده مولکول نامشخص است.")
 
 # --- ساختار اصلی برنامه Streamlit ---
 
 st.set_page_config(layout="wide", page_title="نمایشگر ایزومر آلکان")
-
 st.title("🧪 نمایشگر ایزومرهای آلکان")
 st.write("تعداد اتم‌های کربن (بین ۱ تا ۱۰) را وارد کنید تا ایزومرهای آن آلکان به صورت سه‌بعدی نمایش داده شوند.")
 st.caption("توجه: لیست ایزومرها و نام‌ها برای تعداد کربن بالا کامل نیست.")
 
 ITEMS_PER_PAGE = 5
 
+# --- Session State (بدون تغییر) ---
 if 'page_number' not in st.session_state: st.session_state.page_number = 0
 if 'current_carbon_number' not in st.session_state: st.session_state.current_carbon_number = 5
 if 'isomer_list' not in st.session_state: st.session_state.isomer_list = get_alkane_isomer_smiles(st.session_state.current_carbon_number)
 
+# --- Form (بدون تغییر) ---
 with st.form("carbon_form"):
     carbon_number_input = st.number_input(
         label="تعداد کربن (n):", min_value=1, max_value=10,
@@ -137,6 +110,7 @@ with st.form("carbon_form"):
         st.session_state.isomer_list = get_alkane_isomer_smiles(carbon_number_input)
         st.session_state.page_number = 0
 
+# --- منطق نمایش (با تغییرات در حلقه نمایش) ---
 if st.session_state.isomer_list:
     all_isomer_smiles = st.session_state.isomer_list
     total_isomers = len(all_isomer_smiles)
@@ -155,48 +129,39 @@ if st.session_state.isomer_list:
         end_idx = min(start_idx + ITEMS_PER_PAGE, total_isomers)
         current_page_smiles = all_isomer_smiles[start_idx:end_idx]
 
-        # --- مرحله جدید: آماده‌سازی داده‌های نمایش برای صفحه فعلی ---
         page_display_data = []
+        # Use a spinner while preparing potentially slow 3D models
         with st.spinner("در حال آماده‌سازی مدل‌های سه‌بعدی..."):
             for i, smiles in enumerate(current_page_smiles):
                 isomer_global_index = start_idx + i + 1
                 view_data = prepare_molecule_view_data(smiles, isomer_global_index)
-                if view_data: # فقط اگر آماده‌سازی موفق بود
-                    isomer_name = smiles_to_name_map.get(smiles, "نام یافت نشد")
-                    page_display_data.append({
-                        'global_index': isomer_global_index,
-                        'name': isomer_name,
-                        'smiles': smiles,
-                        'view_data': view_data
-                    })
-                else:
-                    # اگر آماده‌سازی ناموفق بود، می‌توان یک placeholder اضافه کرد یا نادیده گرفت
-                     page_display_data.append({
-                        'global_index': isomer_global_index,
-                        'name': smiles_to_name_map.get(smiles, "N/A"),
-                        'smiles': smiles,
-                        'view_data': None # علامت برای نمایش خطا
-                    })
+                isomer_name = smiles_to_name_map.get(smiles, "Name Not Found")
+                page_display_data.append({
+                    'global_index': isomer_global_index,
+                    'name': isomer_name,
+                    'smiles': smiles,
+                    'view_data': view_data
+                })
 
 
-        # --- نمایش داده‌های آماده شده در ستون‌ها ---
+        # --- نمایش داده‌های آماده شده به صورت عمودی ---
         if page_display_data:
-            num_columns = min(len(page_display_data), 3)
-            if num_columns > 0:
-                 cols = st.columns(num_columns)
-                 # حالا بر اساس داده‌های آماده شده در ستون‌ها نمایش می‌دهیم
-                 for i, display_item in enumerate(page_display_data):
-                     col_index = i % num_columns
-                     with cols[col_index]:
-                         st.subheader(f"Isomer {display_item['global_index']} / {total_isomers}")
-                         st.caption(f"**Name:** {display_item['name']}")
-                         st.caption(f"`{display_item['smiles']}`")
-                         with st.container():
-                             # تابع جدید نمایش را صدا می‌زنیم
-                             display_molecule_data(display_item['view_data'])
+            # دیگر نیازی به محاسبه ستون‌ها نیست
+            for display_item in page_display_data: # حلقه مستقیم روی آیتم‌ها
+                st.subheader(f"Isomer {display_item['global_index']} / {total_isomers}")
+
+                # --- استایل جدید نام ---
+                st.header(f"⚛️ **{display_item['name']}**") # استفاده از هدر و بولد
+
+                st.caption(f"`{display_item['smiles']}`")
+                with st.container():
+                    display_molecule_data(display_item['view_data'])
+
+                # --- اضافه کردن جداکننده ---
+                st.divider()
 
 
-        st.markdown("---")
+        st.markdown("---") # جداکننده قبل از دکمه‌ها
 
         # --- دکمه‌های ناوبری (بدون تغییر) ---
         col1, col2, col3 = st.columns([1, 2, 1])
